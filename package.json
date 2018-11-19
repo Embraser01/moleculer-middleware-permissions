@@ -1,0 +1,17 @@
+{
+  "name": "moleculer-middleware-permissions",
+  "version": "0.0.0",
+  "description": "Moleculer middleware that handle permissions for actions",
+  "main": "index.js",
+  "repository": "https://github.com/Embraser01/moleculer-middleware-permissions",
+  "author": "Marc-Antoine Fernandes <marcantoinefernandes@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "moleculer",
+    "permissions",
+    "jwt"
+  ],
+  "peerDependencies": {
+    "moleculer": "^0.13.4"
+  }
+}
