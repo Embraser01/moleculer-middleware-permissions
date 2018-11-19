@@ -2,7 +2,7 @@ const { PermissionError } = require('./errors');
 const { resolve } = require('./helpers');
 
 function basicPermissionCheck(current, requested) {
-    const missingPerms = Array.isArray(current) ? requested.filter(p => !current.include(p)) : requested;
+    const missingPerms = Array.isArray(current) ? requested.filter(p => !current.includes(p)) : requested;
     if (missingPerms.length === 0) return true;
 
     return `You don't have enough permissions in order to do that! Missing permissions: ${missingPerms.join(', ')}`;
