@@ -16,11 +16,13 @@ class PermissionGuard {
      * @param options.checkFunction {Function} A check function which return true
      *      if the request is accepted or a object explaining why the request was rejected
      * @param options.permissionsPath {string} Path where permissions should be (starting from ctx)
+     * @param options.pathSeparator {string} Path separator in the cae you have `.` in a property
      */
     constructor(options) {
         this.options = {
             checkFunction: basicPermissionCheck,
             permissionsPath: 'meta.user.permissions',
+            pathSeparator: undefined,
             ...options,
         };
     }
@@ -48,7 +50,7 @@ class PermissionGuard {
         return function permissionMiddleware(handler, action) {
             if (!Array.isArray(action.permissions)) return handler;
             return (ctx) => {
-                this.check(resolve(this.options.permissionsPath, ctx), action.permissions);
+                this.check(resolve(this.options.permissionsPath, ctx, this.options.pathSeparator), action.permissions);
                 return handler(ctx);
             };
         }.bind(this);

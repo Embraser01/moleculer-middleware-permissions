@@ -13,5 +13,12 @@
   ],
   "peerDependencies": {
     "moleculer": "^0.13.4"
+  },
+  "devDependencies": {
+    "jest": "^23.6.0",
+    "moleculer": "^0.13.4"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }
