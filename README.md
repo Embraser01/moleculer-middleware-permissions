@@ -2,7 +2,13 @@
 
 Check action permissions.
 
+[![codecov](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions/branch/master/graph/badge.svg)](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions)
+[![Travis (.com)](https://img.shields.io/travis/com/ivandelabeldad/rackian-gateway.svg)](https://github.com/Embraser01/moleculer-middleware-permissions)
+
+
 ## Install
+
+> This module requires at least Node v8.0.0.
 
 ```bash
 yarn add moleculer-middleware-permissions
