@@ -13,3 +13,6 @@ install:
 script:
   - yarn test --coverage
   - codecov
+
+notifications:
+  email: false

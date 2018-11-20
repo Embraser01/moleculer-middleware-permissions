@@ -35,7 +35,9 @@ module.exports = {
 module.exports = {
    actions: {
        hello: {
-         permissions: ['hello:read'],
+         // The user must have both 'hello:read' AND 'hello:name'
+         // You can override this behaviour by passing your 'checkFunction'
+         permissions: ['hello:read', 'hello:name'],
          handler (ctx) {
            const {name} = ctx.params;
            return `Hello ${name}`
