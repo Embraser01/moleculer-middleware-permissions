@@ -3,7 +3,7 @@
 Check action permissions.
 
 [![codecov](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions/branch/master/graph/badge.svg)](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions)
-[![Travis (.com)](https://img.shields.io/travis/com/ivandelabeldad/rackian-gateway.svg)](https://github.com/Embraser01/moleculer-middleware-permissions)
+[![Travis (.com)](https://img.shields.io/travis/com/Embraser01/moleculer-middleware-permissions.svg)](https://github.com/Embraser01/moleculer-middleware-permissions)
 
 
 ## Install
