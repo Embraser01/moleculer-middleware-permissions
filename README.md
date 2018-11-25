@@ -4,11 +4,14 @@ Check action permissions.
 
 [![codecov](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions/branch/master/graph/badge.svg)](https://codecov.io/gh/Embraser01/moleculer-middleware-permissions)
 [![Travis (.com)](https://img.shields.io/travis/com/Embraser01/moleculer-middleware-permissions.svg)](https://github.com/Embraser01/moleculer-middleware-permissions)
+![NpmLicense](https://img.shields.io/npm/l/moleculer-middleware-permissions.svg)
+![npm](https://img.shields.io/npm/v/moleculer-middleware-permissions.svg)
+![node](https://img.shields.io/node/v/moleculer-middleware-permissions.svg)
 
 
 ## Install
 
-> This module requires at least Node v8.0.0.
+> This module requires at least Node v8.3.0.
 
 ```bash
 yarn add moleculer-middleware-permissions
