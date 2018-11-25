@@ -33,6 +33,7 @@ module.exports = {
 ```js
 // service.js
 module.exports = {
+  name: 'awesome.service',
    actions: {
        hello: {
          // The user must have both 'hello:read' AND 'hello:name'
@@ -40,9 +41,16 @@ module.exports = {
          permissions: ['hello:read', 'hello:name'],
          handler (ctx) {
            const {name} = ctx.params;
-           return `Hello ${name}`
+           return `Hello ${name}`;
          }
-       }
+       },
+       me: {
+          // Will check for these permissions: ['awesome.service.me']
+          permissions: true,
+          handler (ctx) {
+            return `Hello me`;
+          }
+        }
      }
 };
 ```
@@ -54,6 +62,7 @@ module.exports = {
     For the default behaviour search for `basicPermissionCheck` in `src/index.js`.
 - `permissionsPath`: Path to look for the request permissions (from the `ctx` object).
     Default to `meta.user.permissions`,
+- `permissionsSep`: Separator used to transform the action name to a permission name (default: `.`).
 - `pathSeparator`: Separator to use when there is a `.` in a property.
 
 # License
