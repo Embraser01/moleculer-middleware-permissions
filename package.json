@@ -1,6 +1,6 @@
 {
   "name": "moleculer-middleware-permissions",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Moleculer middleware that handle permissions for actions",
   "main": "index.js",
   "repository": "https://github.com/Embraser01/moleculer-middleware-permissions",
