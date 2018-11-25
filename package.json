@@ -18,6 +18,9 @@
     "jest": "^23.6.0",
     "moleculer": "^0.13.4"
   },
+  "engines": {
+    "node": ">8.3.0"
+  },
   "scripts": {
     "test": "jest"
   }
