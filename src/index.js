@@ -27,6 +27,17 @@ class PermissionGuard {
       pathSeparator: undefined,
       ...options,
     };
+
+    this.permissionSet = new Set();
+  }
+
+  /**
+   * Return an array containing every permissions used with the middleware.
+   *
+   * @return {Array<string>}
+   */
+  getPermissions() {
+    return [...this.permissionSet];
   }
 
   /**
@@ -59,6 +70,21 @@ class PermissionGuard {
    */
   middleware() {
     return {
+      serviceCreated: (service) => {
+        Object
+          .values(service.actions)
+          // Get all permissions used in this service
+          .map(({ name, permissions }) => {
+            if (permissions === true) return [this._sanitizeName(name)];
+            if (!Array.isArray(permissions)) return null;
+            return permissions;
+          })
+          // Remove undefined or null values
+          .filter(p => !!p)
+          .reduce((x, y) => [...x, ...y], [])
+          .forEach(p => this.permissionSet.add(p));
+      },
+
       localAction: (handler, action) => {
         let perms = action.permissions;
         if (perms === true) perms = [this._sanitizeName(action.name)];
