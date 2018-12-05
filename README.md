@@ -58,25 +58,10 @@ module.exports = {
 };
 ```
 
-# Get a list of permissions
+# Notes
 
-You can get the list of every permissions declared in services using the middleware.
-It can be useful to dynamically handle permissions.
-
-It uses the [`serviceCreated`](https://moleculer.services/docs/0.13/middlewares.html) middleware.
-
-```js
-const PermissionGuard = require('moleculer-middleware-permissions');
-
-const guard = new PermissionGuard();
-// Add it as middleware
-[...]
-
-// Get all permissions after the broker is created
-const perms = guard.getPermissions();
-```
-
-It returns an _Array_ with every permissions checked by the middleware (without duplication).
+The middleware also add a property `rawPermissions` on the action. It allows anyone to have the real permissions used
+by the action. The array is immutable, so any attempt to edit it will fail.
 
 # Options
 

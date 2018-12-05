@@ -140,43 +140,16 @@ describe('PermissionGuard class', () => {
 
       expect(res).toEqual('Yeah');
     });
-  });
 
-  describe('Permission set', () => {
-    it('should register every permissions of a service', () => {
-      const guard = new PermissionGuard({});
-      const { serviceCreated } = guard.middleware();
-      const service = {
-        actions: [
-          { name: 'test.1' },
-          { name: 'test.2', permissions: true },
-          { name: 'test.3', permissions: ['custom.perm'] },
-        ],
-      };
+    it('should save real permissions inside the action', () => {
+      const middleware = new PermissionGuard().middleware().localAction;
+      const handler = jest.fn();
+      const action = { permissions: true, name: 'service.name' };
 
-      serviceCreated(service);
+      middleware(handler, action);
 
-      const set = guard.getPermissions();
-
-      expect(set).toEqual(['test:2', 'custom.perm']);
-    });
-
-    it('should not add a permission already added', () => {
-      const guard = new PermissionGuard({});
-      const { serviceCreated } = guard.middleware();
-      const service = {
-        actions: [
-          { name: 'test.2', permissions: ['custom.perm'] },
-          { name: 'test.3', permissions: ['custom.perm'] },
-          { name: 'test.4', permissions: ['custom.perm', 'custom.another.perm'] },
-        ],
-      };
-
-      serviceCreated(service);
-
-      const set = guard.getPermissions();
-
-      expect(set).toEqual(['custom.perm', 'custom.another.perm']);
+      expect(action).toHaveProperty('rawPermissions');
+      expect(action.rawPermissions).toEqual(['service:name']);
     });
   });
 });

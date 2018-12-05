@@ -27,17 +27,6 @@ class PermissionGuard {
       pathSeparator: undefined,
       ...options,
     };
-
-    this.permissionSet = new Set();
-  }
-
-  /**
-   * Return an array containing every permissions used with the middleware.
-   *
-   * @return {Array<string>}
-   */
-  getPermissions() {
-    return [...this.permissionSet];
   }
 
   /**
@@ -70,26 +59,16 @@ class PermissionGuard {
    */
   middleware() {
     return {
-      serviceCreated: (service) => {
-        Object
-          .values(service.actions)
-          // Get all permissions used in this service
-          .map(({ name, permissions }) => {
-            if (permissions === true) return [this._sanitizeName(name)];
-            if (!Array.isArray(permissions)) return null;
-            return permissions;
-          })
-          // Remove undefined or null values
-          .filter(p => !!p)
-          .reduce((x, y) => [...x, ...y], [])
-          .forEach(p => this.permissionSet.add(p));
-      },
-
       localAction: (handler, action) => {
         let perms = action.permissions;
         if (perms === true) perms = [this._sanitizeName(action.name)];
 
         if (!Array.isArray(perms)) return handler;
+
+        // Save the real checked perms inside the action
+        // It allows other components to know what permissions are really checked
+        action.rawPermissions = Object.freeze(perms);
+
         return (ctx) => {
           this.check(resolve(this.options.permissionsPath, ctx, this.options.pathSeparator), perms);
           return handler(ctx);
