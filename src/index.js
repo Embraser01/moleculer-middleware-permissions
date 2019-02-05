@@ -37,8 +37,8 @@ class PermissionGuard {
    * @param current [Array<string>} User permissions
    * @param requested {Array<string>} Requested permissions
    */
-  check(current, requested) {
-    const result = this.options.checkFunction(current, requested, this.options);
+  async check(current, requested) {
+    const result = await this.options.checkFunction(current, requested, this.options);
 
     if (result !== true) {
       throw new PermissionError('Insufficient permissions', null, result);
@@ -69,8 +69,8 @@ class PermissionGuard {
         // It allows other components to know what permissions are really checked
         action.rawPermissions = Object.freeze(perms);
 
-        return (ctx) => {
-          this.check(resolve(this.options.permissionsPath, ctx, this.options.pathSeparator), perms);
+        return async (ctx) => {
+          await this.check(resolve(this.options.permissionsPath, ctx, this.options.pathSeparator), perms);
           return handler(ctx);
         };
       },
