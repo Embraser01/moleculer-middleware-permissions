@@ -1,6 +1,8 @@
 const PermissionGuard = require('../index');
 const { PermissionError } = require('../errors');
 
+process.on('unhandledRejection', () => {});
+
 describe('PermissionGuard class', () => {
   it('should instantiate with default options', () => {
     const guard = new PermissionGuard();
@@ -57,14 +59,14 @@ describe('PermissionGuard class', () => {
       const checkFunction = jest.fn(() => 'true');
       const guard = new PermissionGuard({ checkFunction });
 
-      expect(() => guard.check([], [])).toThrow(PermissionError);
+      expect(guard.check([], [])).rejects.toEqual(PermissionError);
     });
 
     it('should throw if checkFunction return falsy value', () => {
       const checkFunction = jest.fn(() => false);
       const guard = new PermissionGuard({ checkFunction });
 
-      expect(() => guard.check([], [])).toThrow(PermissionError);
+      expect(guard.check([], [])).rejects.toEqual(PermissionError);
     });
 
     it('should not fail if current is not an array', () => {
@@ -115,7 +117,7 @@ describe('PermissionGuard class', () => {
       // If not fail, accepted
       const res = fn(ctx);
 
-      expect(res).toEqual('Yeah');
+      expect(res).resolves.toEqual('Yeah');
     });
 
     it('should throw before calling handler', () => {
@@ -125,7 +127,7 @@ describe('PermissionGuard class', () => {
       const ctx = { meta: { user: { permissions: [] } } };
       const fn = middleware(handler, action);
 
-      expect(() => fn(ctx)).toThrow(PermissionError);
+      expect(fn(ctx)).rejects.toEqual(PermissionError);
     });
 
     it('should use default action name if permissions === true', () => {
@@ -138,7 +140,7 @@ describe('PermissionGuard class', () => {
       // If not fail, accepted
       const res = fn(ctx);
 
-      expect(res).toEqual('Yeah');
+      expect(res).resolves.toEqual('Yeah');
     });
 
     it('should save real permissions inside the action', () => {
