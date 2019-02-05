@@ -68,6 +68,7 @@ by the action. The array is immutable, so any attempt to edit it will fail.
 - `checkFunction`: A function that return `true` if the request has enough permissions.
     Else, the return value will be send in the rejected `PermissionError`.
     For the default behaviour search for `basicPermissionCheck` in `src/index.js`.
+    _This function can be async_.
 - `permissionsPath`: Path to look for the request permissions (from the `ctx` object).
     Default to `meta.user.permissions`,
 - `permissionsSep`: Separator used to transform the action name to a permission name (default: `.`).
