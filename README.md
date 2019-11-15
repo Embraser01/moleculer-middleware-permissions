@@ -96,6 +96,10 @@ This method can be async.
 
 > You can override this behaviour by overriding the `check` method the class.
 
+# Notes
+
+The v2 was inspired by @icebob's [kantab](https://github.com/icebob/kantab/) project.
+
 # License
 
 MIT
