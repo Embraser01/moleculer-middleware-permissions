@@ -1,7 +1,6 @@
 const PermissionGuard = require('../index');
 const { PermissionError } = require('../errors');
 
-process.on('unhandledRejection', () => {});
 
 describe('PermissionGuard class', () => {
   it('should instantiate with default options', () => {
@@ -9,75 +8,152 @@ describe('PermissionGuard class', () => {
 
     expect(guard.options).toBeDefined();
     expect(guard.options.checkFunction).toBeDefined();
-    expect(guard.options.permissionsPath).toEqual('meta.user.permissions');
-    expect(guard.options.permissionsSep).toEqual(':');
+    expect(guard.options.getPermissionsFromActions).toBeDefined();
+    expect(guard.options.getUserPermissions).toBeDefined();
   });
 
   it('should instantiate with user options', () => {
     const checkFunction = jest.fn();
+    const getPermissionsFromActions = jest.fn();
+    const getUserPermissions = jest.fn();
 
     const guard = new PermissionGuard({
       checkFunction,
-      permissionsPath: 'my.custom.path',
-      permissionsSep: '.',
+      getPermissionsFromActions,
+      getUserPermissions,
     });
 
     expect(guard.options).toBeDefined();
     expect(guard.options.checkFunction).toEqual(checkFunction);
-    expect(guard.options.permissionsPath).toEqual('my.custom.path');
-    expect(guard.options.permissionsSep).toEqual('.');
+    expect(guard.options.getPermissionsFromActions).toEqual(getPermissionsFromActions);
+    expect(guard.options.getUserPermissions).toEqual(getUserPermissions);
   });
 
-  it('should sanitize name with the permissionsSep options', () => {
-    const guard = new PermissionGuard({ permissionsSep: '|' });
+  it('should create a simple permissions error', () => {
+    const err = new PermissionError('Not allowed');
 
-    expect(guard._sanitizeName('service.action.name')).toBe('service|action|name');
+    expect(err).toBeInstanceOf(Error);
   });
 
   describe('check fun', () => {
-    it('should call checkFunction once', () => {
-      const checkFunction = jest.fn();
+    it('should call checkFunction if perm names', async () => {
+      const checkFunction = jest.fn(() => true);
       const guard = new PermissionGuard({ checkFunction });
 
-      try {
-        guard.check([], []);
-      } catch (e) {
-        // ignored
-      }
+      await guard.check({ permNames: ['test'], permFuncs: [] });
 
       expect(checkFunction).toHaveBeenCalledTimes(1);
     });
 
-    it('should not throw if checkFunction return true', () => {
+    it('should not call checkFunction if no perms names', async () => {
       const checkFunction = jest.fn(() => true);
       const guard = new PermissionGuard({ checkFunction });
 
-      guard.check([], []);
+      await guard.check({ permNames: [], permFuncs: [() => true] });
+
+      expect(checkFunction).not.toHaveBeenCalled();
     });
 
-    it('should throw if checkFunction return truthy value', () => {
-      const checkFunction = jest.fn(() => 'true');
-      const guard = new PermissionGuard({ checkFunction });
+    it('should call each fn in permFuncs', async () => {
+      const fn1 = jest.fn(() => true);
+      const fn2 = jest.fn(() => true);
+      const guard = new PermissionGuard();
 
-      expect(guard.check([], [])).rejects.toEqual(PermissionError);
+      await guard.check({ permNames: [], permFuncs: [fn1, fn2] });
+
+      expect(fn1).toHaveBeenCalledTimes(1);
+      expect(fn2).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw if checkFunction return falsy value', () => {
+    it('should wait for async fn in permFuncs', async () => {
+      let hasWaited = false;
+      const fn1 = jest.fn(() => new Promise((resolve => setTimeout(() => {
+        hasWaited = true;
+        resolve(true);
+      }, 200))));
+      const guard = new PermissionGuard();
+
+      await guard.check({ permNames: [], permFuncs: [fn1] });
+
+      expect(fn1).toHaveBeenCalledTimes(1);
+      expect(hasWaited).toBe(true);
+    });
+
+    it('should throw with only permNames and checkFun => false', async () => {
       const checkFunction = jest.fn(() => false);
       const guard = new PermissionGuard({ checkFunction });
 
-      expect(guard.check([], [])).rejects.toEqual(PermissionError);
+      await expect(guard.check({ permNames: ['test'], permFuncs: [] })).rejects.toBeInstanceOf(PermissionError);
+      expect(checkFunction).toHaveBeenCalled();
     });
 
-    it('should not fail if current is not an array', () => {
+    it('should throw with only permFuns and all return false', async () => {
       const guard = new PermissionGuard();
 
-      expect(() => guard.check('Not an array', [])).not.toThrow();
+      await expect(guard.check({ permNames: [], permFuncs: [() => false] })).rejects.toBeInstanceOf(PermissionError);
+    });
+
+    it('should throw with permNames and permFuns returning false', async () => {
+      const checkFunction = jest.fn(() => false);
+      const guard = new PermissionGuard({ checkFunction });
+
+      await expect(guard.check({ permNames: ['test'], permFuncs: [() => false] })).rejects
+        .toBeInstanceOf(PermissionError);
+    });
+  });
+
+  describe('getPermissionsFromAction', () => {
+    const { getPermissionsFromActions } = new PermissionGuard().options;
+
+    it('should return array directly', () => {
+      expect(getPermissionsFromActions({ permissions: ['test'] })).toEqual(['test']);
+    });
+
+    it('should return array from action if permissions === true', () => {
+      expect(getPermissionsFromActions({ permissions: true, name: 'test' })).toEqual(['test']);
+    });
+
+    it('should return array if one item', () => {
+      expect(getPermissionsFromActions({ permissions: 'test' })).toEqual(['test']);
+    });
+  });
+
+  describe('getUserPermissions', () => {
+    const { getUserPermissions } = new PermissionGuard().options;
+
+    const item = {};
+
+    it('should resolve user permissions from ctx', () => {
+      expect(getUserPermissions({ meta: { user: { permissions: item } } })).toBe(item);
+    });
+  });
+
+  describe('checkFunction', () => {
+    const { checkFunction } = new PermissionGuard().options;
+
+    it('should work if no permissions requested', () => {
+      expect(checkFunction([], [])).toBe(true);
+    });
+
+    it('should not work if current is null', () => {
+      expect(checkFunction(null, ['test'])).not.toBe(true);
+    });
+
+    it('should not work if missing request perm', () => {
+      expect(checkFunction(['other'], ['test'])).not.toBe(true);
+    });
+
+    it('should work if current === requested', () => {
+      expect(checkFunction(['test'], ['test'])).toBe(true);
+    });
+
+    it('should work if current have more than requested', () => {
+      expect(checkFunction(['test', 'other'], ['test'])).toBe(true);
     });
   });
 
   describe('Middleware function', () => {
-    it('should be disabled if there is no permissions on the action', () => {
+    it('should be disabled if there are no permissions on the action', () => {
       const middleware = new PermissionGuard().middleware().localAction;
       const handler = jest.fn();
       const action = {};
@@ -87,10 +163,13 @@ describe('PermissionGuard class', () => {
       expect(res).toEqual(handler);
     });
 
-    it('should be disabled if permissions is not an array', () => {
-      const middleware = new PermissionGuard().middleware().localAction;
+    it('should be disabled if permissions are empty', () => {
+      const middleware = new PermissionGuard({
+        getPermissionsFromActions: () => [],
+      }).middleware().localAction;
+
       const handler = jest.fn();
-      const action = { permissions: 'Not an array' };
+      const action = { permissions: [] };
 
       const res = middleware(handler, action);
 
@@ -100,58 +179,105 @@ describe('PermissionGuard class', () => {
     it('should wrap the handler inside a new fn', () => {
       const middleware = new PermissionGuard().middleware().localAction;
       const handler = jest.fn();
-      const action = { permissions: [] };
+      const action = { permissions: ['test'] };
 
       const res = middleware(handler, action);
 
       expect(res).not.toEqual(handler);
     });
 
-    it('should call the handler after checking', () => {
-      const middleware = new PermissionGuard().middleware().localAction;
+    it('should call the handler after checking', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(() => true);
+      const middleware = permissionGuard.middleware().localAction;
       const handler = jest.fn(ctx => 'Yeah');
-      const action = { permissions: [] };
-      const ctx = { meta: { user: { permissions: [] } } };
+      const action = { permissions: ['test'] };
+      const ctx = { meta: { user: { permissions: ['test'] } } };
       const fn = middleware(handler, action);
 
-      // If not fail, accepted
-      const res = fn(ctx);
+      await fn(ctx);
 
-      expect(res).resolves.toEqual('Yeah');
+      expect(handler).not.toBe(fn);
+      await expect(handler).toHaveBeenCalled();
     });
 
-    it('should throw before calling handler', () => {
-      const middleware = new PermissionGuard().middleware().localAction;
-      const handler = jest.fn();
-      const action = { permissions: ['admin:action'] };
-      const ctx = { meta: { user: { permissions: [] } } };
-      const fn = middleware(handler, action);
-
-      expect(fn(ctx)).rejects.toEqual(PermissionError);
-    });
-
-    it('should use default action name if permissions === true', () => {
-      const middleware = new PermissionGuard().middleware().localAction;
+    it('should separate function from strings', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(() => true);
+      const middleware = permissionGuard.middleware().localAction;
       const handler = jest.fn(ctx => 'Yeah');
-      const action = { permissions: true, name: 'service.name' };
-      const ctx = { meta: { user: { permissions: ['service:name'] } } };
+      const fn1 = () => true;
+      const action = { permissions: ['test', fn1] };
+
       const fn = middleware(handler, action);
 
-      // If not fail, accepted
-      const res = fn(ctx);
+      await fn();
 
-      expect(res).resolves.toEqual('Yeah');
+      await expect(permissionGuard.check).toHaveBeenCalledWith(expect.objectContaining({
+        permNames: ['test'],
+        permFuncs: [fn1],
+      }));
     });
 
-    it('should save real permissions inside the action', () => {
-      const middleware = new PermissionGuard().middleware().localAction;
+    it('should create an owner function', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(() => true);
+      const middleware = permissionGuard.middleware().localAction;
+      const handler = jest.fn(ctx => 'Yeah');
+      const action = { permissions: ['$owner'] };
+
+      const fn = middleware(handler, action);
+
+      await fn();
+
+      await expect(permissionGuard.check).toHaveBeenCalledWith(expect.objectContaining({
+        permNames: [],
+        permFuncs: [expect.anything()],
+      }));
+    });
+
+    it('should call the owner function', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(({ permFuncs }) => permFuncs[0]({ service: { isEntityOwner: fn1 } }));
+      const middleware = permissionGuard.middleware().localAction;
       const handler = jest.fn();
-      const action = { permissions: true, name: 'service.name' };
+      const fn1 = jest.fn();
+      const action = { permissions: ['$owner'] };
+      const fn = middleware(handler, action);
 
-      middleware(handler, action);
+      await fn();
 
-      expect(action).toHaveProperty('rawPermissions');
-      expect(action.rawPermissions).toEqual(['service:name']);
+      await expect(fn1).toHaveBeenCalled();
+    });
+
+    it('should ignore if owner function not defined', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(({ permFuncs }) => permFuncs[0]({ service: {} }));
+      const middleware = permissionGuard.middleware().localAction;
+      const handler = jest.fn();
+      const action = { permissions: ['$owner'] };
+      const fn = middleware(handler, action);
+
+      await fn();
+
+      await expect(permissionGuard.check).toHaveReturnedWith(false);
+    });
+
+    it('should ignore if perm is not function or string', async () => {
+      const permissionGuard = new PermissionGuard();
+      permissionGuard.check = jest.fn(() => true);
+      const middleware = permissionGuard.middleware().localAction;
+      const handler = jest.fn(ctx => 'Yeah');
+      const action = { permissions: [3.14] };
+
+      const fn = middleware(handler, action);
+
+      await fn();
+
+      await expect(permissionGuard.check).toHaveBeenCalledWith(expect.objectContaining({
+        permNames: [],
+        permFuncs: [],
+      }));
     });
   });
 });
