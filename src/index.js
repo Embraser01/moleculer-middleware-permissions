@@ -1,57 +1,85 @@
-const { PermissionError } = require('./errors');
 const { resolve } = require('./helpers');
+const { PermissionError } = require('./errors');
 
-function basicPermissionCheck(current, requested) {
+const checkFunction = (current, requested) => {
   const missingPerms = Array.isArray(current) ? requested.filter(p => !current.includes(p)) : requested;
   if (missingPerms.length === 0) return true;
 
   return `You don't have enough permissions in order to do that! Missing permissions: ${missingPerms.join(', ')}`;
-}
+};
+
+const getPermissionsFromAction = (action) => {
+  const { permissions, name } = action;
+
+  if (Array.isArray(permissions)) return permissions;
+  if (permissions === true) return [name];
+  return [permissions];
+};
+
+const getUserPermissions = (ctx) => {
+  return resolve('meta.user.permissions', ctx);
+};
 
 class PermissionGuard {
   /**
    * Permission Guard constructor.
    *
    * @param options {Object}
-   * @param options.checkFunction {Function} A check function which return true
-   *      if the request is accepted or a object explaining why the request was rejected
-   * @param options.permissionsPath {string} Path where permissions should be (starting from ctx)
-   * @param options.permissionsSep {string} Separator used in permissions (default: ':')
-   * @param options.pathSeparator {string} Path separator in the cae you have `.` in a property
+   * @param options.checkFunction {Function} A check function that return true
+   *      if the request is accepted, or an object explaining why the request was rejected
+   * @param options.getPermissionsFromAction {Function} Return permissions from action.
+   * @param options.getUserPermissions {Function} Return permissions from context.
    */
-  constructor(options) {
+  constructor(options = {}) {
     this.options = {
-      checkFunction: basicPermissionCheck,
-      permissionsPath: 'meta.user.permissions',
-      permissionsSep: ':',
-      pathSeparator: undefined,
+      checkFunction,
+      getPermissionsFromAction,
+      getUserPermissions,
       ...options,
     };
   }
 
   /**
-   * Check if an user permissions contains all the requested permissions.
+   * Check permissions of a user.
+   * Given:
+   * ```
+   *   myAction: {
+   *     permissions: [
+   *       'user.get',
+   *       () => true,
+   *       'user.write',
+   *       '$owner'
+   *     ]
+   *     ...
+   *   }
+   *
+   * ```
+   * It will be split in 2 parts. First, it will check string permissions using the `checkFunction`.
+   * If it doesn't return true, it will test functions and specials ($owner).
+   *
+   * If the `checkFunction` returned `true` or any function returned a truthy value, it will
+   * be considered as allowed and will call the next handler.
+   *
    * Throw an PermissionError if there is not enough permission.
-   * Will use the provided checkFunction if defined.
    *
-   * @param current [Array<string>} User permissions
-   * @param requested {Array<string>} Requested permissions
+   * `'$owner'` is a special perm that will call the method `isEntityOwner` of the action's service.
    */
-  async check(current, requested) {
-    const result = await this.options.checkFunction(current, requested, this.options);
-
-    if (result !== true) {
-      throw new PermissionError('Insufficient permissions', null, result);
+  async check({ permNames, permFuncs, current, ctx }) {
+    let res = false;
+    if (permNames.length > 0) {
+      res = await this.options.checkFunction(current, permNames);
     }
-  }
 
-  /**
-   * Replace dots in the action by the permissions separator.
-   *
-   * @param actionName {string} Action full name.
-   */
-  _sanitizeName(actionName) {
-    return actionName.split('.').join(this.options.permissionsSep);
+    if (res !== true) {
+      if (permFuncs.length > 0) {
+        const results = await Promise.all(permFuncs.map(async fn => fn.call(this, ctx)));
+        res = results.some(r => !!r);
+      }
+
+      if (res !== true) {
+        throw new PermissionError('You have no right for this operation!', 'ERR_HAS_NO_ACCESS', { res });
+      }
+    }
   }
 
   /**
@@ -60,17 +88,45 @@ class PermissionGuard {
   middleware() {
     return {
       localAction: (handler, action) => {
-        let perms = action.permissions;
-        if (perms === true) perms = [this._sanitizeName(action.name)];
+        if (!action.permissions) return handler;
 
-        if (!Array.isArray(perms)) return handler;
+        const actionPerms = this.options.getPermissionsFromAction(action);
 
-        // Save the real checked perms inside the action
-        // It allows other components to know what permissions are really checked
-        action.rawPermissions = Object.freeze(perms);
+        if (!actionPerms.length) return handler;
+
+        const permNames = [];
+        const permFuncs = [];
+        actionPerms.forEach((p) => {
+          if (typeof p === 'function') {
+            // Add custom permission function
+            permFuncs.push(p);
+            return;
+          }
+
+          if (typeof p === 'string') {
+            if (p === '$owner') {
+              // Check if user is owner of the entity
+              permFuncs.push((ctx) => {
+                if (typeof ctx.service.isEntityOwner === 'function') {
+                  return ctx.service.isEntityOwner.call(this, ctx);
+                }
+                return false;
+              });
+              return;
+            }
+
+            // Add a role or permission name
+            permNames.push(p);
+          }
+        });
 
         return async (ctx) => {
-          await this.check(resolve(this.options.permissionsPath, ctx, this.options.pathSeparator), perms);
+          await this.check({
+            current: await this.options.getUserPermissions(ctx),
+            permNames,
+            permFuncs,
+            ctx,
+          });
           return handler(ctx);
         };
       },
