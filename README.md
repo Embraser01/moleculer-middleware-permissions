@@ -41,7 +41,7 @@ module.exports = {
        hello: {
          // The user must have both 'hello:read' AND 'hello:name'
          // You can override this behaviour by passing your 'checkFunction'
-         permissions: ['hello:read', 'hello:name'],
+         permissions: ['hello.read', '$owner', (ctx) => ctx.call('acl.canSayHello')],
          handler (ctx) {
            const {name} = ctx.params;
            return `Hello ${name}`;
@@ -58,21 +58,43 @@ module.exports = {
 };
 ```
 
-# Notes
+## Options
 
-The middleware also add a property `rawPermissions` on the action. It allows anyone to have the real permissions used
-by the action. The array is immutable, so any attempt to edit it will fail.
+- `checkFunction(current, requested)`: A function that return `true` if the request has enough
+  permissions. Else, the return value will be send in the rejected `PermissionError`.
+- `getPermissionsFromAction(action)`: Called to return an array of permissions from an action.
+- `getUserPermissions(ctx)`: Function called to retrieve user's permissions. By default will
+  return `meta.user.permissions`.
 
-# Options
+## Permissions type
 
-- `checkFunction`: A function that return `true` if the request has enough permissions.
-    Else, the return value will be send in the rejected `PermissionError`.
-    For the default behaviour search for `basicPermissionCheck` in `src/index.js`.
-    _This function can be async_.
-- `permissionsPath`: Path to look for the request permissions (from the `ctx` object).
-    Default to `meta.user.permissions`,
-- `permissionsSep`: Separator used to transform the action name to a permission name (default: `.`).
-- `pathSeparator`: Separator to use when there is a `.` in a property.
+### A string
+
+The simplest way to add permissions is to use a list of strings, representing each a
+permissions, like this:
+- `members.read`: Can list/get/find members
+- `members.write`: Can update/remove/create members
+
+It will be checked before any functions and if it allows to access, function **will not** be
+checked!
+
+### `$owner`
+
+If you want the owner of the entity to be able to update it but not other ones, you can use this
+special permissions. It will try to call the method `isEntityOwner(ctx)` of your service.
+Returning a truthy value will act as allowed.
+
+This method can be async.
+
+### A function
+
+You can also provide functions to check if the user is allowed to access an action. It will be
+called only if strings aren't allowed first. Only one function needs to return a truthy value to
+be allowed!
+
+This method can be async.
+
+> You can override this behaviour by overriding the `check` method the class.
 
 # License
 

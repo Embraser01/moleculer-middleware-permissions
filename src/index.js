@@ -8,7 +8,7 @@ const checkFunction = (current, requested) => {
   return `You don't have enough permissions in order to do that! Missing permissions: ${missingPerms.join(', ')}`;
 };
 
-const getPermissionsFromActions = (action) => {
+const getPermissionsFromAction = (action) => {
   const { permissions, name } = action;
 
   if (Array.isArray(permissions)) return permissions;
@@ -27,13 +27,13 @@ class PermissionGuard {
    * @param options {Object}
    * @param options.checkFunction {Function} A check function that return true
    *      if the request is accepted, or an object explaining why the request was rejected
-   * @param options.getPermissionsFromActions {Function} Return permissions from action.
+   * @param options.getPermissionsFromAction {Function} Return permissions from action.
    * @param options.getUserPermissions {Function} Return permissions from context.
    */
   constructor(options = {}) {
     this.options = {
       checkFunction,
-      getPermissionsFromActions,
+      getPermissionsFromAction,
       getUserPermissions,
       ...options,
     };
@@ -90,7 +90,7 @@ class PermissionGuard {
       localAction: (handler, action) => {
         if (!action.permissions) return handler;
 
-        const actionPerms = this.options.getPermissionsFromActions(action);
+        const actionPerms = this.options.getPermissionsFromAction(action);
 
         if (!actionPerms.length) return handler;
 

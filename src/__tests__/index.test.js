@@ -8,24 +8,24 @@ describe('PermissionGuard class', () => {
 
     expect(guard.options).toBeDefined();
     expect(guard.options.checkFunction).toBeDefined();
-    expect(guard.options.getPermissionsFromActions).toBeDefined();
+    expect(guard.options.getPermissionsFromAction).toBeDefined();
     expect(guard.options.getUserPermissions).toBeDefined();
   });
 
   it('should instantiate with user options', () => {
     const checkFunction = jest.fn();
-    const getPermissionsFromActions = jest.fn();
+    const getPermissionsFromAction = jest.fn();
     const getUserPermissions = jest.fn();
 
     const guard = new PermissionGuard({
       checkFunction,
-      getPermissionsFromActions,
+      getPermissionsFromAction,
       getUserPermissions,
     });
 
     expect(guard.options).toBeDefined();
     expect(guard.options.checkFunction).toEqual(checkFunction);
-    expect(guard.options.getPermissionsFromActions).toEqual(getPermissionsFromActions);
+    expect(guard.options.getPermissionsFromAction).toEqual(getPermissionsFromAction);
     expect(guard.options.getUserPermissions).toEqual(getUserPermissions);
   });
 
@@ -103,18 +103,18 @@ describe('PermissionGuard class', () => {
   });
 
   describe('getPermissionsFromAction', () => {
-    const { getPermissionsFromActions } = new PermissionGuard().options;
+    const { getPermissionsFromAction } = new PermissionGuard().options;
 
     it('should return array directly', () => {
-      expect(getPermissionsFromActions({ permissions: ['test'] })).toEqual(['test']);
+      expect(getPermissionsFromAction({ permissions: ['test'] })).toEqual(['test']);
     });
 
     it('should return array from action if permissions === true', () => {
-      expect(getPermissionsFromActions({ permissions: true, name: 'test' })).toEqual(['test']);
+      expect(getPermissionsFromAction({ permissions: true, name: 'test' })).toEqual(['test']);
     });
 
     it('should return array if one item', () => {
-      expect(getPermissionsFromActions({ permissions: 'test' })).toEqual(['test']);
+      expect(getPermissionsFromAction({ permissions: 'test' })).toEqual(['test']);
     });
   });
 
@@ -165,7 +165,7 @@ describe('PermissionGuard class', () => {
 
     it('should be disabled if permissions are empty', () => {
       const middleware = new PermissionGuard({
-        getPermissionsFromActions: () => [],
+        getPermissionsFromAction: () => [],
       }).middleware().localAction;
 
       const handler = jest.fn();
